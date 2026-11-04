@@ -1,0 +1,617 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Petualangan Rantai Makanan</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700;800&display=swap">
+<style>
+/* Layout: satu kartu per slide, bilah langkah di atas, tombol Kembali/Lanjut di bawah. Gaya kartun: garis tebal dan bayangan keras. */
+:root {
+  --bg: #d9f2bf;
+  --bg2: #c3e8a0;
+  --card: #ffffff;
+  --ink: #173f26;
+  --muted: #476a51;
+  --green: #3bb54a;
+  --green-soft: #e3f7d4;
+  --sun: #ffd23f;
+  --on-green: #0f2d1a;
+  --good: #1f8a3b;
+  --good-bg: #dff7e1;
+  --bad: #c2381f;
+  --bad-bg: #ffe4dc;
+  --prod: #8ee06a;
+  --kon: #ffd96b;
+  --pen: #e0bd96;
+  --line: #173f26;
+  --font-display: "Fredoka", "Trebuchet MS", "Comic Sans MS", sans-serif;
+  --font-body: "Nunito", "Segoe UI", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0f2418; --bg2: #163321; --card: #1b3a29; --ink: #e7f8dc; --muted: #a9c9b0;
+    --green: #4cc65c; --green-soft: #234a31; --sun: #ffd23f; --on-green: #0f2d1a;
+    --good: #7fe08a; --good-bg: #1f4a2b; --bad: #ff9a82; --bad-bg: #4a2a22;
+    --prod: #7fcf62; --kon: #e0b93f; --pen: #c4a37c; --line: #08130c;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0f2418; --bg2: #163321; --card: #1b3a29; --ink: #e7f8dc; --muted: #a9c9b0;
+  --green: #4cc65c; --green-soft: #234a31; --sun: #ffd23f; --on-green: #0f2d1a;
+  --good: #7fe08a; --good-bg: #1f4a2b; --bad: #ff9a82; --bad-bg: #4a2a22;
+  --prod: #7fcf62; --kon: #e0b93f; --pen: #c4a37c; --line: #08130c;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body {
+  background: var(--bg); color: var(--ink);
+  font-family: var(--font-body); font-size: 17px; line-height: 1.55; font-weight: 600;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 12px 28px;
+}
+h1, h2, h3 { font-family: var(--font-display); font-weight: 700; line-height: 1.15; margin: 0; text-wrap: balance; }
+p { margin: 0; }
+#app { max-width: 880px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; position: relative; }
+.cloud { position: absolute; font-size: 38px; opacity: .7; animation: drift 18s linear infinite alternate; pointer-events: none; }
+.cloud.c1 { top: -4px; right: 6%; }
+.cloud.c2 { top: 60px; left: -2%; animation-duration: 26s; font-size: 28px; }
+@keyframes drift { from { transform: translateX(-14px); } to { transform: translateX(22px); } }
+
+/* Langkah */
+.steps { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; position: relative; z-index: 1; }
+.step { font-family: var(--font-display); font-weight: 600; font-size: 15px; display: flex; align-items: center; gap: 6px; padding: 4px 12px 4px 4px; border: 3px solid var(--line); border-radius: 999px; background: var(--card); color: var(--ink); cursor: pointer; }
+.step b { display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--bg2); font-weight: 700; }
+.step[aria-current="step"] { background: var(--green); color: var(--on-green); }
+.step[aria-current="step"] b { background: var(--card); color: var(--ink); }
+.step:disabled { opacity: .45; cursor: not-allowed; }
+.step:focus-visible, .btn:focus-visible, .opt:focus-visible, .node:focus-visible, .pick:focus-visible, .face:focus-visible, textarea:focus-visible, input:focus-visible { outline: 4px solid var(--sun); outline-offset: 2px; }
+@media (max-width: 560px) { .step span { display: none; } .step[aria-current="step"] span { display: inline; } }
+
+/* Kartu dan tombol */
+.card { background: var(--card); border: 3px solid var(--line); border-radius: 24px; box-shadow: 0 6px 0 var(--line); padding: 22px; position: relative; z-index: 1; }
+.slide { display: flex; flex-direction: column; gap: 16px; animation: pop .45s cubic-bezier(.2, 1.4, .4, 1); }
+@keyframes pop { from { opacity: 0; transform: translateY(14px) scale(.97); } to { opacity: 1; transform: none; } }
+.btn { font-family: var(--font-display); font-weight: 600; font-size: 18px; color: var(--on-green); background: var(--green); border: 3px solid var(--line); border-radius: 999px; padding: 10px 26px; box-shadow: 0 5px 0 var(--line); cursor: pointer; transition: transform .1s, box-shadow .1s; }
+.btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 7px 0 var(--line); }
+.btn:active:not(:disabled) { transform: translateY(4px); box-shadow: 0 1px 0 var(--line); }
+.btn.alt { background: var(--sun); }
+.btn.ghost { background: var(--card); color: var(--ink); }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.nav { display: flex; justify-content: space-between; gap: 12px; position: relative; z-index: 1; }
+.hills { height: 34px; border: 3px solid var(--line); border-radius: 60px 60px 18px 18px; background: var(--green); opacity: .9; }
+.tag { display: inline-block; font-family: var(--font-display); font-weight: 600; font-size: 14px; padding: 2px 12px; border: 2px solid var(--line); border-radius: 999px; background: var(--sun); color: #173f26; }
+.lead { color: var(--muted); }
+
+/* Sampul */
+.cover { text-align: center; display: flex; flex-direction: column; gap: 14px; align-items: center; }
+.cover h1 { font-size: clamp(2rem, 7vw, 3.1rem); color: var(--ink); }
+.cover h1 em { font-style: normal; color: var(--green); -webkit-text-stroke: 2px var(--line); paint-order: stroke fill; }
+.parade { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 4px 10px; font-size: clamp(2.4rem, 11vw, 3.6rem); }
+.parade .a { display: inline-block; animation: bob 1.6s ease-in-out infinite; }
+.parade .ar { font-family: var(--font-display); font-size: .5em; color: var(--green); -webkit-text-stroke: 1px var(--line); }
+@keyframes bob { 0%, 100% { transform: translateY(0) rotate(-4deg); } 50% { transform: translateY(-12px) rotate(4deg); } }
+.ident { width: 100%; max-width: 520px; text-align: left; display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; background: var(--green-soft); border: 3px dashed var(--line); border-radius: 18px; padding: 14px 18px; }
+.ident dt { color: var(--muted); }
+.ident dd { margin: 0; font-weight: 800; min-width: 0; }
+.ident input { width: 100%; font: inherit; font-weight: 800; color: var(--ink); background: var(--card); border: 3px solid var(--line); border-radius: 12px; padding: 6px 12px; }
+
+/* Tujuan */
+.goal-big { font-family: var(--font-display); font-size: clamp(1.3rem, 4.4vw, 1.8rem); line-height: 1.3; }
+.checks { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.checks li { display: flex; gap: 12px; align-items: center; background: var(--green-soft); border: 3px solid var(--line); border-radius: 16px; padding: 10px 14px; animation: pop .5s both; }
+.checks li:nth-child(1) { animation-delay: .15s; } .checks li:nth-child(2) { animation-delay: .35s; } .checks li:nth-child(3) { animation-delay: .55s; }
+.checks .ck { flex: none; width: 32px; height: 32px; display: grid; place-items: center; border-radius: 50%; background: var(--green); color: var(--on-green); border: 3px solid var(--line); font-weight: 800; }
+
+/* Materi */
+.chain { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 8px; }
+.node { font-family: var(--font-display); font-weight: 600; font-size: 15px; color: var(--ink); display: flex; flex-direction: column; align-items: center; gap: 0; min-width: 84px; padding: 8px 10px; border: 3px solid var(--line); border-radius: 18px; background: var(--card); box-shadow: 0 4px 0 var(--line); cursor: pointer; transition: transform .2s; }
+.node .em { font-size: 2.3rem; line-height: 1.2; }
+.node[data-role="prod"] { background: var(--prod); }
+.node[data-role="kon"] { background: var(--kon); }
+.node[data-role="pen"] { background: var(--pen); }
+.node[data-role="sun"] { background: var(--sun); }
+.node.on { transform: translateY(-8px) scale(1.1); box-shadow: 0 10px 0 var(--line); }
+.node.on .em { animation: bob 1s ease-in-out infinite; }
+.node { color: #173f26; }
+.arrow { font-family: var(--font-display); font-size: 26px; font-weight: 700; color: var(--green); -webkit-text-stroke: 1.5px var(--line); animation: nudge 1.2s ease-in-out infinite; }
+@keyframes nudge { 50% { transform: translateX(5px); } }
+.bubble { background: var(--green-soft); border: 3px solid var(--line); border-radius: 18px; padding: 14px 16px; min-height: 88px; position: relative; }
+.bubble b { font-family: var(--font-display); font-size: 1.15rem; }
+.roles { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 12px; }
+.role { border: 3px solid var(--line); border-radius: 18px; padding: 12px 14px; display: flex; flex-direction: column; gap: 4px; }
+.role h3 { font-size: 1.1rem; color: #173f26; }
+.role p { color: #173f26; font-size: 15px; }
+.role.prod { background: var(--prod); } .role.kon { background: var(--kon); } .role.pen { background: var(--pen); }
+.remember { display: flex; gap: 12px; align-items: center; background: var(--sun); color: #173f26; border: 3px solid var(--line); border-radius: 18px; padding: 12px 16px; font-weight: 800; }
+.remember .big { font-size: 2rem; font-family: var(--font-display); }
+
+/* Aktivitas */
+.slots { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px 8px; }
+.slot { width: 86px; height: 98px; border: 3px dashed var(--line); border-radius: 18px; display: grid; place-items: center; text-align: center; background: var(--green-soft); font-family: var(--font-display); font-weight: 600; font-size: 14px; color: var(--muted); }
+.slot.full { border-style: solid; background: var(--prod); color: #173f26; animation: pop .4s cubic-bezier(.2, 1.6, .4, 1); }
+.slot .em { font-size: 2.3rem; display: block; line-height: 1.2; }
+.slot-wrap { display: contents; }
+.picks { display: flex; flex-wrap: wrap; justify-content: center; gap: 12px; }
+.pick { font-family: var(--font-display); font-weight: 600; font-size: 15px; color: #173f26; background: var(--kon); display: flex; flex-direction: column; align-items: center; min-width: 92px; padding: 8px 12px; border: 3px solid var(--line); border-radius: 18px; box-shadow: 0 4px 0 var(--line); cursor: pointer; }
+.pick .em { font-size: 2.4rem; line-height: 1.2; }
+.pick:hover:not(:disabled) { transform: translateY(-3px); }
+.pick:disabled { opacity: .25; cursor: default; box-shadow: none; }
+.pick.shake { animation: shake .4s; }
+@keyframes shake { 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+.hint { min-height: 52px; border: 3px solid var(--line); border-radius: 16px; padding: 10px 14px; background: var(--green-soft); }
+.hint.good { background: var(--good-bg); }
+.hint.bad { background: var(--bad-bg); }
+.rounds { display: flex; gap: 8px; justify-content: center; }
+.dot { width: 14px; height: 14px; border-radius: 50%; border: 3px solid var(--line); background: var(--card); }
+.dot.now { background: var(--sun); } .dot.done { background: var(--green); }
+
+/* Kuis */
+.qhead { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.bar { height: 16px; border: 3px solid var(--line); border-radius: 999px; background: var(--green-soft); overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--green); transition: width .4s; }
+.qrow { display: flex; gap: 14px; align-items: center; }
+.qemoji { flex: none; font-size: 3.2rem; line-height: 1; animation: bob 1.8s ease-in-out infinite; }
+.qtext { font-family: var(--font-display); font-weight: 600; font-size: clamp(1.15rem, 3.8vw, 1.45rem); line-height: 1.3; min-width: 0; }
+.opts { display: grid; gap: 10px; }
+.opt { display: flex; gap: 12px; align-items: center; text-align: left; font: inherit; font-weight: 800; color: var(--ink); background: var(--card); border: 3px solid var(--line); border-radius: 16px; padding: 10px 14px; cursor: pointer; box-shadow: 0 4px 0 var(--line); transition: transform .1s; }
+.opt .l { flex: none; width: 34px; height: 34px; display: grid; place-items: center; border-radius: 50%; background: var(--sun); color: #173f26; border: 3px solid var(--line); font-family: var(--font-display); }
+.opt span { min-width: 0; overflow-wrap: anywhere; }
+.opt:hover:not(:disabled) { transform: translateY(-2px); background: var(--green-soft); }
+.opt:disabled { cursor: default; }
+.opt.right { background: var(--good-bg); border-color: var(--good); animation: pop .4s; }
+.opt.wrong { background: var(--bad-bg); border-color: var(--bad); animation: shake .4s; }
+.opt.right .l::after { content: ""; }
+.fb { border: 3px solid var(--line); border-radius: 18px; padding: 12px 16px; animation: pop .4s; }
+.fb.good { background: var(--good-bg); }
+.fb.bad { background: var(--bad-bg); }
+.fb h3 { font-size: 1.2rem; margin-bottom: 2px; }
+.fb.good h3 { color: var(--good); } .fb.bad h3 { color: var(--bad); }
+
+/* Hasil */
+.score { text-align: center; display: flex; flex-direction: column; gap: 8px; align-items: center; }
+.score .num { font-family: var(--font-display); font-size: clamp(3rem, 14vw, 4.6rem); line-height: 1; color: var(--green); -webkit-text-stroke: 3px var(--line); paint-order: stroke fill; }
+.stars { font-size: 2.4rem; letter-spacing: 4px; }
+.stars .s { display: inline-block; animation: pop .5s both; }
+.stars .off { filter: grayscale(1); opacity: .35; }
+.review { display: grid; grid-template-columns: repeat(auto-fit, minmax(44px, 1fr)); gap: 8px; }
+.rv { text-align: center; font-family: var(--font-display); border: 3px solid var(--line); border-radius: 12px; padding: 2px 0; }
+.rv.ok { background: var(--good-bg); color: var(--good); }
+.rv.no { background: var(--bad-bg); color: var(--bad); }
+.refl { display: grid; gap: 14px; }
+.q { display: grid; gap: 8px; }
+.faces { display: flex; flex-wrap: wrap; gap: 8px; }
+.face { font: inherit; font-weight: 800; color: var(--ink); background: var(--card); border: 3px solid var(--line); border-radius: 999px; padding: 6px 14px; cursor: pointer; }
+.face[aria-pressed="true"] { background: var(--green); color: var(--on-green); box-shadow: 0 4px 0 var(--line); }
+textarea { width: 100%; min-height: 90px; font: inherit; font-weight: 700; color: var(--ink); background: var(--card); border: 3px solid var(--line); border-radius: 14px; padding: 10px 12px; resize: vertical; }
+.row { display: flex; flex-wrap: wrap; gap: 12px; justify-content: center; }
+
+.fx { position: fixed; z-index: 50; pointer-events: none; font-size: 24px; animation: fly .95s ease-out forwards; }
+@keyframes fly { from { opacity: 1; transform: translate(0, 0) scale(.6); } to { opacity: 0; transform: translate(var(--dx), var(--dy)) scale(1.3) rotate(240deg); } }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+
+<div id="app">
+  <span class="cloud c1" aria-hidden="true">☁️</span>
+  <span class="cloud c2" aria-hidden="true">☁️</span>
+  <nav class="steps" id="steps" aria-label="Langkah belajar"></nav>
+  <main id="stage" aria-live="polite"></main>
+  <div class="nav">
+    <button class="btn ghost" id="prev" type="button">← Kembali</button>
+    <button class="btn" id="next" type="button">Lanjut →</button>
+  </div>
+  <div class="hills" aria-hidden="true"></div>
+</div>
+
+<script>
+var QS = [
+  {e:"🔗", q:"Apa yang dimaksud dengan rantai makanan?", o:["Urutan makhluk hidup yang saling makan dan dimakan","Kumpulan hewan yang hidup di satu kandang","Rantai besi untuk mengikat hewan","Daftar makanan kesukaan hewan"], a:0, x:"Rantai makanan adalah urutan makhluk hidup yang saling makan dan dimakan. Contohnya rumput dimakan belalang, lalu belalang dimakan katak."},
+  {e:"☀️", q:"Sumber energi paling awal dalam rantai makanan adalah ...", o:["Air hujan","Tanah","Angin","Matahari"], a:3, x:"Tumbuhan memakai cahaya Matahari untuk membuat makanan. Jadi energi paling awal berasal dari Matahari."},
+  {e:"🌿", q:"Tumbuhan hijau disebut produsen karena ...", o:["Tumbuhan memakan hewan kecil","Tumbuhan tidak butuh cahaya","Tumbuhan bisa membuat makanan sendiri","Tumbuhan hanya hidup di dalam tanah"], a:2, x:"Produsen membuat makanan sendiri dengan bantuan cahaya Matahari, air, dan udara."},
+  {e:"🌾", q:"Manakah yang termasuk produsen?", o:["Padi","Tikus","Ular","Elang"], a:0, x:"Padi adalah tumbuhan hijau yang membuat makanan sendiri, jadi padi adalah produsen. Tikus, ular, dan elang adalah konsumen."},
+  {e:"🐄", q:"Hewan yang hanya memakan tumbuhan disebut ...", o:["Karnivora","Omnivora","Herbivora","Produsen"], a:2, x:"Herbivora memakan tumbuhan, contohnya sapi dan belalang. Karnivora memakan daging, dan omnivora memakan tumbuhan sekaligus daging."},
+  {e:"🦁", q:"Singa memakan daging hewan lain. Singa termasuk ...", o:["Herbivora","Karnivora","Omnivora","Pengurai"], a:1, x:"Hewan pemakan daging disebut karnivora. Singa adalah karnivora."},
+  {e:"🐔", q:"Ayam memakan biji-bijian dan cacing. Ayam termasuk ...", o:["Herbivora","Karnivora","Pengurai","Omnivora"], a:3, x:"Ayam memakan tumbuhan (biji) dan hewan (cacing), jadi ayam adalah omnivora."},
+  {e:"🦗", q:"Pada Rumput → Belalang, tanda panah (→) berarti ...", o:["Rumput dimakan oleh belalang","Belalang dimakan oleh rumput","Rumput dan belalang berkelahi","Belalang berubah menjadi rumput"], a:0, x:"Panah menunjukkan arah perpindahan makanan dan energi, dari yang dimakan ke yang memakan. Rumput dimakan oleh belalang."},
+  {e:"🐸", q:"Urutan rantai makanan yang benar adalah ...", o:["Ular → Katak → Belalang → Rumput","Rumput → Katak → Belalang → Ular","Belalang → Rumput → Katak → Ular","Rumput → Belalang → Katak → Ular"], a:3, x:"Rumput (produsen) dimakan belalang, belalang dimakan katak, dan katak dimakan ular."},
+  {e:"🐭", q:"Padi → Tikus → Ular → Elang. Siapa konsumen tingkat 1?", o:["Padi","Tikus","Ular","Elang"], a:1, x:"Konsumen tingkat 1 adalah hewan yang memakan produsen. Tikus memakan padi."},
+  {e:"🦅", q:"Pada rantai Padi → Tikus → Ular → Elang, siapa konsumen puncak (paling akhir)?", o:["Tikus","Padi","Elang","Ular"], a:2, x:"Elang berada di akhir rantai dan tidak dimakan hewan lain dalam rantai ini, jadi elang adalah konsumen puncak."},
+  {e:"🍄", q:"Jamur dan bakteri menguraikan sisa makhluk hidup yang sudah mati. Mereka disebut ...", o:["Pengurai","Produsen","Konsumen puncak","Herbivora"], a:0, x:"Pengurai mengubah sisa makhluk hidup yang mati menjadi zat hara yang menyuburkan tanah."},
+  {e:"🌱", q:"Apa manfaat pengurai bagi tumbuhan?", o:["Membuat tanah menjadi subur","Memakan daun tumbuhan","Membuat tumbuhan layu","Menghalangi cahaya Matahari"], a:0, x:"Hasil penguraian menjadi zat hara di dalam tanah. Zat hara ini dipakai tumbuhan untuk tumbuh."},
+  {e:"🐍", q:"Rumput → Belalang → Katak → Ular. Jika semua katak hilang, jumlah belalang akan ...", o:["Berkurang banyak","Tetap sama","Bertambah banyak","Hilang semua"], a:2, x:"Tidak ada lagi katak yang memakan belalang, sehingga belalang bertambah banyak dan bisa menghabiskan rumput."},
+  {e:"🐸", q:"Pada Rumput → Belalang → Katak → Ular, siapa konsumen tingkat 2?", o:["Belalang","Katak","Ular","Rumput"], a:1, x:"Konsumen tingkat 1 adalah belalang karena memakan rumput. Konsumen tingkat 2 adalah katak karena memakan belalang."},
+  {e:"🐦", q:"Rantai makanan di kebun yang benar adalah ...", o:["Elang → Burung → Ulat → Daun","Ulat → Daun → Burung → Elang","Daun → Burung → Ulat → Elang","Daun → Ulat → Burung → Elang"], a:3, x:"Daun dimakan ulat, ulat dimakan burung, dan burung dimakan elang."},
+  {e:"🐛", q:"Ulat hanya memakan daun. Ulat termasuk ...", o:["Karnivora","Herbivora","Pengurai","Produsen"], a:1, x:"Ulat hanya memakan tumbuhan, jadi ulat adalah herbivora."},
+  {e:"🏜️", q:"Kemarau panjang membuat rumput mati. Pada rantai Rumput → Belalang → Katak → Ular, siapa yang lebih dulu kekurangan makanan?", o:["Ular","Katak","Jamur","Belalang"], a:3, x:"Belalang memakan rumput secara langsung. Jika rumput mati, belalang kekurangan makanan lebih dulu, lalu katak, lalu ular."},
+  {e:"🌳", q:"Makhluk hidup mana yang bukan konsumen?", o:["Sapi","Pohon jati","Harimau","Ayam"], a:1, x:"Pohon jati adalah tumbuhan, jadi pohon jati adalah produsen. Sapi, harimau, dan ayam adalah konsumen."},
+  {e:"🌍", q:"Apa yang bisa kita lakukan agar rantai makanan tetap seimbang?", o:["Memburu hewan sebanyak-banyaknya","Menebang semua pohon","Menjaga tumbuhan dan hewan tetap hidup","Membuang sampah ke sungai"], a:2, x:"Jika satu makhluk hidup hilang, makhluk hidup lain ikut terganggu. Karena itu kita harus menjaga alam."}
+];
+
+var NODES = [
+  {id:"sun", em:"☀️", n:"Matahari", role:"sun", tag:"Sumber energi", t:"Matahari memberi cahaya dan energi. Tumbuhan memakai cahaya ini untuk membuat makanan."},
+  {id:"gr", em:"🌿", n:"Rumput", role:"prod", tag:"Produsen", t:"Rumput membuat makanan sendiri. Itu sebabnya rumput disebut produsen."},
+  {id:"gh", em:"🦗", n:"Belalang", role:"kon", tag:"Konsumen tingkat 1 (herbivora)", t:"Belalang memakan rumput. Hewan pemakan tumbuhan disebut herbivora."},
+  {id:"fr", em:"🐸", n:"Katak", role:"kon", tag:"Konsumen tingkat 2 (karnivora)", t:"Katak memakan belalang. Hewan pemakan daging disebut karnivora."},
+  {id:"sn", em:"🐍", n:"Ular", role:"kon", tag:"Konsumen tingkat 3 (karnivora)", t:"Ular memakan katak. Ular juga bisa dimakan oleh elang."},
+  {id:"ea", em:"🦅", n:"Elang", role:"kon", tag:"Konsumen tingkat 4 (puncak)", t:"Elang memakan ular. Di rantai ini tidak ada hewan yang memakan elang, jadi elang adalah konsumen puncak."},
+  {id:"mu", em:"🍄", n:"Jamur", role:"pen", tag:"Pengurai", t:"Jamur dan bakteri menguraikan sisa makhluk hidup yang mati. Hasilnya menyuburkan tanah untuk tumbuhan."}
+];
+
+var ROUNDS = [
+  {title:"Ronde 1: Di padang rumput", items:[["🌿","Rumput"],["🦗","Belalang"],["🐸","Katak"],["🐍","Ular"],["🦅","Elang"]]},
+  {title:"Ronde 2: Di sawah", items:[["🌾","Padi"],["🐭","Tikus"],["🐍","Ular"],["🦅","Elang"]]},
+  {title:"Ronde 3: Di kebun", items:[["🍃","Daun"],["🐛","Ulat"],["🐦","Burung"],["🦅","Elang"]]}
+];
+
+var PRAISE = ["Hebat sekali! Jawabanmu benar!", "Keren! Kamu pintar!", "Mantap! Pertahankan ya!", "Bagus sekali! Kamu jago rantai makanan!", "Luar biasa! Satu bintang untukmu!"];
+var STEPS = ["Pembuka", "Tujuan", "Materi", "Aktivitas", "Kuis", "Hasil"];
+
+var $ = function (s) { return document.querySelector(s); };
+var stage = $("#stage");
+var cur = 0, maxReached = 0, nama = "";
+var quiz = {i: 0, score: 0, res: [], done: false};
+var act = {round: 0, placed: [], doneRounds: [false, false, false]};
+var self = [null, null, null];
+var reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+try { nama = localStorage.getItem("rm-nama") || ""; } catch (e) {}
+
+function el(tag, cls, html) { var d = document.createElement(tag); if (cls) d.className = cls; if (html != null) d.innerHTML = html; return d; }
+function who() { return nama ? nama : "Teman"; }
+function burst(target) {
+  if (reduce || !target) return;
+  var r = target.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+  var icons = ["🌟", "🍃", "✨", "🌿"];
+  for (var i = 0; i < 14; i++) {
+    var s = el("span", "fx", icons[i % icons.length]);
+    s.style.left = cx + "px"; s.style.top = cy + "px";
+    s.style.setProperty("--dx", (Math.random() * 300 - 150) + "px");
+    s.style.setProperty("--dy", (Math.random() * -220 - 20) + "px");
+    document.body.appendChild(s);
+    setTimeout(function (n) { return function () { n.remove(); }; }(s), 1000);
+  }
+}
+
+/* ---------- Slide 1: Pembuka ---------- */
+function slideCover() {
+  var s = el("section", "slide");
+  var c = el("div", "card cover");
+  c.innerHTML =
+    '<span class="tag">IPAS · Kelas 5</span>' +
+    '<div class="parade" aria-hidden="true"><span class="a">🌿</span><span class="ar">→</span><span class="a" style="animation-delay:.2s">🦗</span><span class="ar">→</span><span class="a" style="animation-delay:.4s">🐸</span><span class="ar">→</span><span class="a" style="animation-delay:.6s">🐍</span></div>' +
+    '<h1>Petualangan <em>Rantai Makanan</em></h1>' +
+    '<p class="lead">Ayo kenali siapa memakan siapa di alam!</p>' +
+    '<dl class="ident">' +
+    '<dt>Mata pelajaran</dt><dd>IPAS (Ilmu Pengetahuan Alam dan Sosial)</dd>' +
+    '<dt>Kelas</dt><dd>5 SD</dd>' +
+    '<dt>Topik</dt><dd>Rantai makanan</dd>' +
+    '<dt><label for="nama">Namaku</label></dt><dd><input id="nama" type="text" maxlength="30" placeholder="Tulis namamu di sini" autocomplete="off"></dd>' +
+    '</dl>' +
+    '<button class="btn" id="mulai" type="button">Mulai Petualangan</button>';
+  s.appendChild(c);
+  var inp = c.querySelector("#nama");
+  inp.value = nama;
+  inp.addEventListener("input", function () { nama = inp.value.trim(); try { localStorage.setItem("rm-nama", nama); } catch (e) {} });
+  c.querySelector("#mulai").addEventListener("click", function () { go(1); });
+  return s;
+}
+
+/* ---------- Slide 2: Tujuan ---------- */
+function slideTujuan() {
+  var s = el("section", "slide");
+  s.innerHTML =
+    '<div class="card"><span class="tag">Tujuan pembelajaran</span>' +
+    '<h2 class="goal-big" style="margin-top:10px">Hai, ' + who() + '! Hari ini kamu akan belajar mengenali pola rantai makanan.</h2></div>' +
+    '<div class="card"><h3 style="margin-bottom:10px">Setelah belajar, aku bisa:</h3><ul class="checks">' +
+    '<li><span class="ck">✓</span><span>Menyebutkan produsen, konsumen, dan pengurai.</span></li>' +
+    '<li><span class="ck">✓</span><span>Menyusun urutan rantai makanan dengan tanda panah.</span></li>' +
+    '<li><span class="ck">✓</span><span>Menjelaskan arti tanda panah dalam rantai makanan.</span></li>' +
+    '</ul></div>';
+  return s;
+}
+
+/* ---------- Slide 3: Materi ---------- */
+function slideMateri() {
+  var s = el("section", "slide");
+  var card = el("div", "card");
+  card.innerHTML =
+    '<span class="tag">Materi inti</span>' +
+    '<h2 style="margin:10px 0 6px">Apa itu rantai makanan?</h2>' +
+    '<p class="lead">Rantai makanan adalah urutan makhluk hidup yang saling makan dan dimakan. Energinya berpindah dari satu makhluk hidup ke makhluk hidup berikutnya.</p>';
+  var chain = el("div", "chain");
+  chain.style.margin = "16px 0 10px";
+  NODES.forEach(function (n, i) {
+    if (i === 6) { chain.appendChild(el("div", "", "")); }
+    var b = el("button", "node", '<span class="em" aria-hidden="true">' + n.em + '</span><span>' + n.n + '</span>');
+    b.type = "button"; b.dataset.role = n.role; b.dataset.i = i;
+    b.setAttribute("aria-label", n.n + ": " + n.tag);
+    b.addEventListener("click", function () { show(i); });
+    if (i === 6) {
+      chain.lastChild.style.cssText = "flex-basis:100%;height:0";
+      var note = el("div", "arrow", "↑");
+      note.style.fontSize = "22px";
+      chain.appendChild(b);
+      return;
+    }
+    chain.appendChild(b);
+    if (i < 5) chain.appendChild(el("span", "arrow", "→"));
+  });
+  card.appendChild(chain);
+  var bubble = el("div", "bubble");
+  bubble.setAttribute("role", "status");
+  card.appendChild(bubble);
+  var play = el("button", "btn alt", "▶ Putar animasi");
+  play.type = "button"; play.style.marginTop = "14px";
+  card.appendChild(play);
+  s.appendChild(card);
+
+  function show(i) {
+    var n = NODES[i];
+    chain.querySelectorAll(".node").forEach(function (x) { x.classList.toggle("on", +x.dataset.i === i); });
+    bubble.innerHTML = '<b>' + n.em + ' ' + n.n + '</b> <span class="tag">' + n.tag + '</span><p style="margin-top:6px">' + n.t + '</p>';
+  }
+  show(1);
+  var timer = null;
+  play.addEventListener("click", function () {
+    if (timer) clearInterval(timer);
+    var i = 0; show(0);
+    timer = setInterval(function () {
+      i++;
+      if (i > 6) { clearInterval(timer); timer = null; return; }
+      if (!document.body.contains(chain)) { clearInterval(timer); return; }
+      show(i);
+    }, 1700);
+  });
+
+  var roles = el("div", "roles");
+  roles.innerHTML =
+    '<div class="role prod"><h3>🌿 Produsen</h3><p>Membuat makanan sendiri. Contoh: rumput, padi, pohon.</p></div>' +
+    '<div class="role kon"><h3>🐸 Konsumen</h3><p>Memakan makhluk hidup lain. Ada herbivora, karnivora, dan omnivora.</p></div>' +
+    '<div class="role pen"><h3>🍄 Pengurai</h3><p>Menguraikan sisa makhluk hidup yang mati menjadi zat hara tanah.</p></div>';
+  s.appendChild(roles);
+  s.appendChild(el("div", "remember", '<span class="big" aria-hidden="true">→</span><span>Ingat: tanda panah dibaca "dimakan oleh". Rumput → Belalang artinya rumput dimakan oleh belalang.</span>'));
+  return s;
+}
+
+/* ---------- Slide 4: Aktivitas ---------- */
+function slideAktivitas() {
+  var s = el("section", "slide");
+  var card = el("div", "card");
+  s.appendChild(card);
+  var order = {};
+  function draw() {
+    var R = ROUNDS[act.round];
+    var all = act.doneRounds.every(Boolean);
+    var finished = act.placed.length === R.items.length;
+    var picks = order[act.round];
+    if (!picks) {
+      picks = R.items.map(function (x, i) { return i; });
+      // acak tetap: geser urutan agar tidak langsung benar
+      picks = picks.slice(1).concat(picks.slice(0, 1)).reverse();
+      order[act.round] = picks;
+    }
+    var dots = ROUNDS.map(function (r, i) { return '<span class="dot ' + (act.doneRounds[i] ? "done" : (i === act.round ? "now" : "")) + '"></span>'; }).join("");
+    var slotsHtml = R.items.map(function (it, i) {
+      var f = i < act.placed.length;
+      return (i > 0 ? '<span class="arrow" aria-hidden="true">→</span>' : "") +
+        '<div class="slot' + (f ? " full" : "") + '">' + (f ? '<div><span class="em">' + it[0] + '</span>' + it[1] + '</div>' : (i + 1)) + '</div>';
+    }).join("");
+    var picksHtml = picks.map(function (idx) {
+      var it = R.items[idx], used = idx < act.placed.length;
+      return '<button class="pick" type="button" data-i="' + idx + '"' + (used ? " disabled" : "") + '><span class="em" aria-hidden="true">' + it[0] + '</span>' + it[1] + '</button>';
+    }).join("");
+    card.innerHTML =
+      '<span class="tag">Aktivitas interaktif</span>' +
+      '<h2 style="margin:10px 0 4px">' + R.title + '</h2>' +
+      '<p class="lead">Ketuk hewan atau tumbuhan sesuai urutan rantai makanan. Mulai dari produsen!</p>' +
+      '<div class="rounds" style="margin:12px 0">' + dots + '</div>' +
+      '<div class="slots" style="margin:8px 0 16px">' + slotsHtml + '</div>' +
+      '<div class="picks">' + picksHtml + '</div>' +
+      '<div class="hint" id="hint" style="margin-top:16px" role="status">' + (finished ? "" : "Siapa yang harus ada di kotak nomor " + (act.placed.length + 1) + "?") + '</div>' +
+      '<div class="row" style="margin-top:14px" id="acts"></div>';
+    var hint = card.querySelector("#hint"), acts = card.querySelector("#acts");
+    if (finished) {
+      hint.className = "hint good";
+      hint.innerHTML = "<b>Hebat, " + who() + "!</b> Rantai makananmu sudah benar: " + R.items.map(function (x) { return x[1]; }).join(" → ") + ".";
+      var nxt = act.round < ROUNDS.length - 1;
+      var b = el("button", "btn", nxt ? "Ronde berikutnya" : (all ? "Selesai! Lanjut ke kuis" : "Selesai"));
+      b.type = "button";
+      b.addEventListener("click", function () { if (nxt) { act.round++; act.placed = []; draw(); } else { go(4); } });
+      acts.appendChild(b);
+      burst(hint);
+      refreshNav();
+    } else if (act.placed.length > 0) {
+      var rs = el("button", "btn ghost", "Ulangi ronde"); rs.type = "button";
+      rs.addEventListener("click", function () { act.placed = []; draw(); });
+      acts.appendChild(rs);
+    }
+    card.querySelectorAll(".pick").forEach(function (b) {
+      b.addEventListener("click", function () {
+        var idx = +b.dataset.i;
+        if (idx === act.placed.length) {
+          act.placed.push(idx);
+          if (act.placed.length === R.items.length) act.doneRounds[act.round] = true;
+          draw();
+        } else {
+          b.classList.remove("shake"); void b.offsetWidth; b.classList.add("shake");
+          hint.className = "hint bad";
+          var n = act.placed.length;
+          hint.textContent = n === 0
+            ? "Belum tepat. Rantai makanan selalu mulai dari produsen, yaitu yang membuat makanan sendiri."
+            : "Belum tepat. Siapa yang memakan " + R.items[n - 1][1] + "? Ingat, panah dibaca \"dimakan oleh\".";
+        }
+      });
+    });
+  }
+  draw();
+  return s;
+}
+
+/* ---------- Slide 5: Kuis ---------- */
+function slideKuis() {
+  var s = el("section", "slide");
+  var card = el("div", "card");
+  s.appendChild(card);
+  function draw() {
+    if (quiz.done) {
+      card.innerHTML = '<div class="score"><span class="tag">Kuis selesai</span><h2>Kamu sudah menjawab semua soal!</h2><p class="lead">Ayo lihat hasil dan bintangmu.</p></div>';
+      var b = el("button", "btn", "Lihat hasilku"); b.type = "button"; b.style.display = "block"; b.style.margin = "16px auto 0";
+      b.addEventListener("click", function () { go(5); });
+      card.appendChild(b);
+      return;
+    }
+    var q = QS[quiz.i];
+    var letters = ["A", "B", "C", "D"];
+    card.innerHTML =
+      '<div class="qhead"><span class="tag">Soal ' + (quiz.i + 1) + ' dari ' + QS.length + '</span><span class="tag" style="background:var(--green-soft)">Benar: ' + quiz.score + '</span></div>' +
+      '<div class="bar" style="margin:12px 0" role="progressbar" aria-valuemin="0" aria-valuemax="' + QS.length + '" aria-valuenow="' + quiz.i + '"><i style="width:' + (quiz.i / QS.length * 100) + '%"></i></div>' +
+      '<div class="qrow"><span class="qemoji" aria-hidden="true">' + q.e + '</span><p class="qtext">' + q.q + '</p></div>' +
+      '<div class="opts" style="margin-top:16px"></div><div id="fb" style="margin-top:14px" role="status"></div>';
+    var box = card.querySelector(".opts"), fb = card.querySelector("#fb");
+    var locked = false;
+    q.o.forEach(function (t, i) {
+      var b = el("button", "opt", '<span class="l">' + letters[i] + '</span><span>' + t + '</span>');
+      b.type = "button";
+      b.addEventListener("click", function () {
+        if (locked) return; locked = true;
+        var ok = i === q.a;
+        box.querySelectorAll(".opt").forEach(function (x, k) { x.disabled = true; if (k === q.a) x.classList.add("right"); });
+        quiz.res[quiz.i] = ok;
+        var last = quiz.i === QS.length - 1;
+        if (ok) {
+          quiz.score++;
+          b.classList.add("right");
+          fb.innerHTML = '<div class="fb good"><h3>🌟 ' + PRAISE[quiz.i % PRAISE.length] + '</h3><p>Terima kasih sudah teliti, ' + who() + '.</p></div>';
+          burst(b);
+        } else {
+          b.classList.add("wrong");
+          fb.innerHTML = '<div class="fb bad"><h3>Belum tepat, tidak apa-apa!</h3><p><b>Jawaban yang benar:</b> ' + q.o[q.a] + '</p><p style="margin-top:4px"><b>Penjelasan:</b> ' + q.x + '</p></div>';
+        }
+        var nb = el("button", "btn", last ? "Selesai" : "Soal berikutnya →");
+        nb.type = "button"; nb.style.cssText = "display:block;margin:14px 0 0 auto";
+        nb.addEventListener("click", function () {
+          if (last) { quiz.done = true; refreshNav(); }
+          else { quiz.i++; }
+          draw();
+        });
+        fb.appendChild(nb);
+        nb.focus({preventScroll: true});
+      });
+      box.appendChild(b);
+    });
+  }
+  draw();
+  return s;
+}
+
+/* ---------- Slide 6: Hasil, umpan balik, refleksi ---------- */
+function slideHasil() {
+  var s = el("section", "slide");
+  if (!quiz.done) {
+    var c0 = el("div", "card score", '<h2>Kuis belum selesai</h2><p class="lead">Selesaikan 20 soal dulu ya, ' + who() + '.</p>');
+    var bb = el("button", "btn", "Kembali ke kuis"); bb.type = "button";
+    bb.addEventListener("click", function () { go(4); });
+    c0.appendChild(bb); s.appendChild(c0);
+    return s;
+  }
+  var nilai = quiz.score * 5;
+  var bintang = nilai >= 90 ? 3 : nilai >= 70 ? 2 : 1;
+  var pesan = nilai >= 90 ? "Luar biasa! Kamu sudah sangat paham pola rantai makanan."
+    : nilai >= 70 ? "Bagus! Kamu sudah paham sebagian besar. Sedikit lagi sempurna."
+    : "Terus semangat! Baca lagi materinya dan coba kuis sekali lagi.";
+  var stars = "";
+  for (var i = 0; i < 3; i++) stars += '<span class="s' + (i < bintang ? "" : " off") + '" style="animation-delay:' + (i * .25) + 's">⭐</span>';
+  var sc = el("div", "card score",
+    '<span class="tag">Umpan balik</span>' +
+    '<p>Hasil kuis ' + who() + '</p>' +
+    '<div class="num">' + nilai + '</div>' +
+    '<p>' + quiz.score + ' benar dari ' + QS.length + ' soal</p>' +
+    '<div class="stars" aria-label="' + bintang + ' bintang">' + stars + '</div>' +
+    '<p>' + pesan + '</p>');
+  s.appendChild(sc);
+  var rv = el("div", "card");
+  rv.innerHTML = '<h3 style="margin-bottom:10px">Jawabanmu per soal</h3><div class="review">' +
+    QS.map(function (q, i) { var ok = quiz.res[i]; return '<div class="rv ' + (ok ? "ok" : "no") + '" title="Soal ' + (i + 1) + '">' + (i + 1) + (ok ? " ✓" : " ✗") + '</div>'; }).join("") + '</div>';
+  s.appendChild(rv);
+
+  var rf = el("div", "card refl");
+  var qs = ["Aku bisa menyebutkan produsen dan konsumen.", "Aku bisa menyusun rantai makanan dengan urutan yang benar.", "Aku bisa menjelaskan arti tanda panah."];
+  var ch = ["😄 Sudah paham", "🙂 Agak paham", "🤔 Perlu belajar lagi"];
+  rf.innerHTML = '<span class="tag" style="justify-self:start">Refleksi</span><h3>Bagaimana belajarmu hari ini?</h3>';
+  qs.forEach(function (t, qi) {
+    var g = el("div", "q", '<p>' + t + '</p>');
+    var f = el("div", "faces");
+    ch.forEach(function (label, ci) {
+      var b = el("button", "face", label); b.type = "button";
+      b.setAttribute("aria-pressed", self[qi] === ci ? "true" : "false");
+      b.addEventListener("click", function () {
+        self[qi] = ci;
+        f.querySelectorAll(".face").forEach(function (x, k) { x.setAttribute("aria-pressed", k === ci ? "true" : "false"); });
+      });
+      f.appendChild(b);
+    });
+    g.appendChild(f); rf.appendChild(g);
+  });
+  var tq = el("div", "q", '<label for="refl">Bagian apa yang paling seru atau paling sulit buatmu?</label><textarea id="refl" placeholder="Tulis jawabanmu di sini"></textarea>');
+  rf.appendChild(tq);
+  var thanks = el("div", "hint", ""); thanks.hidden = true; thanks.setAttribute("role", "status");
+  var send = el("button", "btn alt", "Selesai refleksi"); send.type = "button"; send.style.justifySelf = "start";
+  send.addEventListener("click", function () {
+    thanks.hidden = false; thanks.className = "hint good";
+    thanks.innerHTML = "<b>Terima kasih, " + who() + "!</b> Tunjukkan jawaban refleksimu kepada gurumu ya.";
+    burst(send);
+  });
+  rf.appendChild(send); rf.appendChild(thanks);
+  s.appendChild(rf);
+
+  var row = el("div", "row");
+  var again = el("button", "btn", "Ulangi kuis"); again.type = "button";
+  again.addEventListener("click", function () { quiz = {i: 0, score: 0, res: [], done: false}; go(4); });
+  var back = el("button", "btn ghost", "Belajar materi lagi"); back.type = "button";
+  back.addEventListener("click", function () { go(2); });
+  row.appendChild(again); row.appendChild(back);
+  s.appendChild(row);
+  return s;
+}
+
+/* ---------- Navigasi ---------- */
+var BUILD = [slideCover, slideTujuan, slideMateri, slideAktivitas, slideKuis, slideHasil];
+function canNext(i) {
+  if (i === 3) return act.doneRounds.every(Boolean);
+  if (i === 4) return quiz.done;
+  return i < 5;
+}
+function refreshNav() {
+  $("#prev").disabled = cur === 0;
+  $("#prev").hidden = cur === 0;
+  $("#next").hidden = cur === 5;
+  $("#next").disabled = !canNext(cur);
+  $("#next").title = $("#next").disabled ? (cur === 3 ? "Selesaikan 3 ronde dulu" : "Selesaikan kuis dulu") : "";
+  var st = $("#steps");
+  st.innerHTML = "";
+  STEPS.forEach(function (n, i) {
+    var b = el("button", "step", "<b>" + (i + 1) + "</b><span>" + n + "</span>");
+    b.type = "button";
+    b.disabled = i > maxReached;
+    if (i === cur) b.setAttribute("aria-current", "step");
+    b.addEventListener("click", function () { go(i); });
+    st.appendChild(b);
+  });
+}
+function go(i) {
+  if (i < 0 || i > 5 || i > maxReached + 0 && i > cur + 1) return;
+  cur = i;
+  if (i > maxReached) maxReached = i;
+  if (i === 3) { act.round = Math.min(act.round, 2); act.placed = act.doneRounds[act.round] ? ROUNDS[act.round].items.map(function (x, k) { return k; }) : act.placed; }
+  stage.innerHTML = "";
+  stage.appendChild(BUILD[i]());
+  refreshNav();
+  window.scrollTo({top: 0, behavior: reduce ? "auto" : "smooth"});
+}
+$("#prev").addEventListener("click", function () { go(cur - 1); });
+$("#next").addEventListener("click", function () { if (canNext(cur)) go(cur + 1); });
+go(0);
+</script>
+
+</body></html>
